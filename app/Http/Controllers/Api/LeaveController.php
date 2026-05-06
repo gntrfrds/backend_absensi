@@ -11,39 +11,110 @@ class LeaveController extends Controller
     // ================= AJUKAN CUTI =================
     public function store(Request $request)
     {
-        $filePath = null;
+        try {
 
-        if ($request->hasFile('attachment')) {
-            $file = $request->file('attachment');
-            $filePath = $file->store('leave_files', 'public');
+            $request->validate([
+
+                'user_id' =>
+                    'required|exists:users,id',
+
+                'type' =>
+                    'required|in:sick,permission',
+
+                'start_date' =>
+                    'required|date',
+
+                'end_date' =>
+                    'required|date',
+
+                'reason' =>
+                    'required',
+
+                // 🔥 FILE
+                'proof' =>
+                    'nullable|image'
+            ]);
+
+            $filePath = null;
+
+            // 🔥 AMBIL FILE DARI proof
+            if ($request->hasFile('proof')) {
+
+                $file = $request->file('proof');
+
+                $filePath = $file->store(
+                    'leave_files',
+                    'public'
+                );
+            }
+
+            $id = DB::table('leaves')->insertGetId([
+
+                'user_id' =>
+                    $request->user_id,
+
+                'type' =>
+                    $request->type,
+
+                'start_date' =>
+                    $request->start_date,
+
+                'end_date' =>
+                    $request->end_date,
+
+                'reason' =>
+                    $request->reason,
+
+                // 🔥 SAVE FILE
+                'attachment' =>
+                    $filePath,
+
+                'status' =>
+                    'pending',
+
+                'created_at' =>
+                    now(),
+
+                'updated_at' =>
+                    now(),
+            ]);
+
+            $data = DB::table('leaves')
+                ->where('id', $id)
+                ->first();
+
+            return response()->json([
+
+                'message' =>
+                    'Pengajuan cuti berhasil',
+
+                'data' =>
+                    $data
+            ]);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+
+                'error' =>
+                    $e->getMessage(),
+
+                'line' =>
+                    $e->getLine()
+
+            ], 500);
         }
-
-        $id = DB::table('leaves')->insertGetId([
-            'user_id' => $request->user_id,
-            'type' => $request->type,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-            'reason' => $request->reason,
-            'attachment' => $filePath,
-            'status' => 'pending',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        $data = DB::table('leaves')->where('id', $id)->first();
-
-        return response()->json([
-            'message' => 'Pengajuan cuti berhasil',
-            'data' => $data
-        ]);
     }
 
     // ================= CUTI SENDIRI =================
     public function myLeave($user_id)
     {
         $data = DB::table('leaves')
+
             ->where('user_id', $user_id)
+
             ->orderBy('created_at', 'desc')
+
             ->get();
 
         return response()->json([
@@ -55,12 +126,24 @@ class LeaveController extends Controller
     public function allLeave()
     {
         $data = DB::table('leaves')
-            ->join('users', 'users.id', '=', 'leaves.user_id')
+
+            ->join(
+                'users',
+                'users.id',
+                '=',
+                'leaves.user_id'
+            )
+
             ->select(
                 'leaves.*',
                 'users.name'
             )
-            ->orderBy('leaves.created_at', 'desc')
+
+            ->orderBy(
+                'leaves.created_at',
+                'desc'
+            )
+
             ->get();
 
         return response()->json([
@@ -72,12 +155,22 @@ class LeaveController extends Controller
     public function approve($id, Request $request)
     {
         DB::table('leaves')
+
             ->where('id', $id)
+
             ->update([
-                'status' => 'approved',
-                'approved_by' => $request->approved_by,
-                'approved_at' => now(),
-                'updated_at' => now(),
+
+                'status' =>
+                    'approved',
+
+                'approved_by' =>
+                    $request->approved_by,
+
+                'approved_at' =>
+                    now(),
+
+                'updated_at' =>
+                    now(),
             ]);
 
         return response()->json([
@@ -89,13 +182,25 @@ class LeaveController extends Controller
     public function reject($id, Request $request)
     {
         DB::table('leaves')
+
             ->where('id', $id)
+
             ->update([
-                'status' => 'rejected',
-                'approved_by' => $request->approved_by,
-                'approved_at' => now(),
-                'rejection_reason' => $request->reason,
-                'updated_at' => now(),
+
+                'status' =>
+                    'rejected',
+
+                'approved_by' =>
+                    $request->approved_by,
+
+                'approved_at' =>
+                    now(),
+
+                'rejection_reason' =>
+                    $request->reason,
+
+                'updated_at' =>
+                    now(),
             ]);
 
         return response()->json([
