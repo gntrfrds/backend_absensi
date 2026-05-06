@@ -13,60 +13,140 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // ================= ABSENSI =================
 
-// 🔥 EXPORT PDF (WAJIB PALING ATAS)
-Route::get('/attendance/export-pdf', [AttendanceController::class, 'exportPDF']);
+// 🔥 EXPORT PDF
+Route::get(
+    '/attendance/export-pdf',
+    [AttendanceController::class, 'exportPDF']
+);
 
 // 🔥 REKAP
-Route::get('/attendance/recap', [AttendanceController::class, 'recap']);
+Route::get(
+    '/attendance/recap',
+    [AttendanceController::class, 'recap']
+);
 
 
 // ================= ADMIN ABSENSI =================
 
-// 🔥 LIST DATA ABSENSI (ADMIN)
-Route::get('/attendance/admin', [AttendanceController::class, 'getAllAttendance']);
+// 🔥 LIST DATA ABSENSI
+Route::get(
+    '/attendance/admin',
+    [AttendanceController::class, 'getAllAttendance']
+);
 
 // 🔥 TAMBAH ABSENSI MANUAL
-Route::post('/attendance/admin', [AttendanceController::class, 'adminStore']);
+Route::post(
+    '/attendance/admin',
+    [AttendanceController::class, 'adminStore']
+);
 
 
 // ================= USER ABSENSI =================
 
-// 🔥 CHECK IN / OUT
-Route::post('/check-in', [AttendanceController::class, 'checkIn']);
-Route::post('/check-out', [AttendanceController::class, 'checkOut']);
+// 🔥 CHECK IN
+Route::post(
+    '/check-in',
+    [AttendanceController::class, 'checkIn']
+);
+
+// 🔥 CHECK OUT
+Route::post(
+    '/check-out',
+    [AttendanceController::class, 'checkOut']
+);
 
 
-// ================= SCHEDULE (🔥 PALING PENTING) =================
+// ================= SCHEDULE =================
 
 // 🔥 LIST JADWAL
-Route::get('/schedule', [AttendanceController::class, 'getSchedules']); // ⬅️ FIX NAMA METHOD
+Route::get(
+    '/schedule',
+    [AttendanceController::class, 'getSchedules']
+);
 
 // 🔥 TAMBAH JADWAL
-Route::post('/schedule', [AttendanceController::class, 'storeSchedule']);
+Route::post(
+    '/schedule',
+    [AttendanceController::class, 'storeSchedule']
+);
+
+// 🔥 HAPUS JADWAL
+Route::delete(
+    '/schedule/{id}',
+    [AttendanceController::class, 'deleteSchedule']
+);
 
 
 // ================= LIST ATTENDANCE =================
 
 // 🔥 WAJIB DI ATAS PARAMETER
-Route::get('/attendance', [AttendanceController::class, 'getAllAttendance']);
+Route::get(
+    '/attendance',
+    [AttendanceController::class, 'getAllAttendance']
+);
 
-// 🔥 PER USER (HARUS PALING BAWAH)
-Route::get('/attendance/{user_id}', [AttendanceController::class, 'getMyAttendance']);
+// 🔥 PER USER
+Route::get(
+    '/attendance/{user_id}',
+    [AttendanceController::class, 'getMyAttendance']
+);
 
 
 // ================= USER =================
-Route::get('/users', [UserController::class, 'index']);
-Route::post('/users', [UserController::class, 'store']);
-Route::put('/users/{id}', [UserController::class, 'update']);
-Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+// 🔥 LIST USER
+Route::get(
+    '/users',
+    [UserController::class, 'index']
+);
+
+// 🔥 TAMBAH USER
+Route::post(
+    '/users',
+    [UserController::class, 'store']
+);
+
+// 🔥 UPDATE USER
+Route::put(
+    '/users/{id}',
+    [UserController::class, 'update']
+);
+
+// 🔥 DELETE USER
+Route::delete(
+    '/users/{id}',
+    [UserController::class, 'destroy']
+);
 
 
 // ================= CUTI =================
 
-// 🔥 TANPA PARAMETER HARUS DI ATAS
-Route::get('/leave', [LeaveController::class, 'allLeave']);
-Route::get('/leave/{user_id}', [LeaveController::class, 'myLeave']);
+// 🔥 LIST SEMUA CUTI
+Route::get(
+    '/leave',
+    [LeaveController::class, 'allLeave']
+);
 
-Route::post('/leave', [LeaveController::class, 'store']);
-Route::post('/leave/{id}/approve', [LeaveController::class, 'approve']);
-Route::post('/leave/{id}/reject', [LeaveController::class, 'reject']);
+// 🔥 CUTI PER USER
+Route::get(
+    '/leave/{user_id}',
+    [LeaveController::class, 'myLeave']
+);
+
+// 🔥 AJUKAN CUTI
+Route::post(
+    '/leave',
+    [LeaveController::class, 'store']
+);
+
+// 🔥 APPROVE CUTI
+Route::post(
+    '/leave/{id}/approve',
+    [LeaveController::class, 'approve']
+);
+
+// 🔥 REJECT CUTI
+Route::post(
+    '/leave/{id}/reject',
+    [LeaveController::class, 'reject']
+);

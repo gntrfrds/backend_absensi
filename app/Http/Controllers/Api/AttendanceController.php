@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 class AttendanceController extends Controller
 {
 
-    // ================= GET ALL =================
+    // ================= GET ALL ATTENDANCE =================
     public function getAllAttendance()
     {
         $data = DB::table('attendances')
@@ -27,7 +27,7 @@ class AttendanceController extends Controller
         ]);
     }
 
-    // ================= GET PER USER =================
+    // ================= GET MY ATTENDANCE =================
     public function getMyAttendance($user_id)
     {
         $data = DB::table('attendances')
@@ -53,6 +53,17 @@ class AttendanceController extends Controller
             $today = now()->toDateString();
             $now = now()->format('H:i:s');
 
+            // 🔥 VALIDASI USER
+            $user = DB::table('users')
+                ->where('id', $request->user_id)
+                ->first();
+
+            if (!in_array($user->role, ['employee', 'intern'])) {
+                return response()->json([
+                    'message' => 'Hanya employee & intern'
+                ], 403);
+            }
+
             // 🔥 CEK SUDAH ABSEN
             $cek = DB::table('attendances')
                 ->where('user_id', $request->user_id)
@@ -77,14 +88,22 @@ class AttendanceController extends Controller
                 ], 400);
             }
 
-            // 🔥 HITUNG TELAT
-            $late = max(0, strtotime($now) - strtotime($schedule->start_time)) / 60;
-            $status = $late > 0 ? 'late' : 'present';
+            // 🔥 STATUS TELAT
+            $late = max(
+                0,
+                strtotime($now) -
+                strtotime($schedule->start_time)
+            ) / 60;
+
+            $status = $late > 0
+                ? 'late'
+                : 'present';
 
             // 🔥 UPLOAD FOTO
-            $path = $request->file('photo')->store('checkin_photos', 'public');
+            $path = $request->file('photo')
+                ->store('checkin_photos', 'public');
 
-            // 🔥 SIMPAN
+            // 🔥 INSERT
             DB::table('attendances')->insert([
                 'user_id' => $request->user_id,
                 'date' => $today,
@@ -99,7 +118,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'message' => 'Check-in berhasil',
                 'status' => $status,
-                'late_minutes' => $late
+                'late_minutes' => round($late)
             ]);
 
         } catch (\Exception $e) {
@@ -124,7 +143,18 @@ class AttendanceController extends Controller
             $today = now()->toDateString();
             $now = now()->format('H:i:s');
 
-            // 🔥 AMBIL DATA ABSEN
+            // 🔥 VALIDASI USER
+            $user = DB::table('users')
+                ->where('id', $request->user_id)
+                ->first();
+
+            if (!in_array($user->role, ['employee', 'intern'])) {
+                return response()->json([
+                    'message' => 'Hanya employee & intern'
+                ], 403);
+            }
+
+            // 🔥 CEK ABSENSI
             $attendance = DB::table('attendances')
                 ->where('user_id', $request->user_id)
                 ->whereDate('date', $today)
@@ -154,12 +184,17 @@ class AttendanceController extends Controller
                 ], 400);
             }
 
-            // 🔥 STATUS
-            $early = strtotime($now) < strtotime($schedule->end_time);
-            $status = $early ? 'early_leave' : 'normal';
+            // 🔥 STATUS PULANG
+            $early = strtotime($now) <
+                strtotime($schedule->end_time);
+
+            $status = $early
+                ? 'early_leave'
+                : 'normal';
 
             // 🔥 UPLOAD FOTO
-            $path = $request->file('photo')->store('checkout_photos', 'public');
+            $path = $request->file('photo')
+                ->store('checkout_photos', 'public');
 
             // 🔥 UPDATE
             DB::table('attendances')
@@ -185,14 +220,15 @@ class AttendanceController extends Controller
         }
     }
 
-    // ================= SCHEDULE LIST =================
-    public function getSchedule()
+    // ================= GET SCHEDULE =================
+    public function getSchedules()
     {
         $data = DB::table('schedules')
             ->join('users', 'schedules.user_id', '=', 'users.id')
             ->select(
                 'schedules.*',
-                'users.name'
+                'users.name',
+                'users.role'
             )
             ->orderBy('date', 'desc')
             ->get();
@@ -202,7 +238,7 @@ class AttendanceController extends Controller
         ]);
     }
 
-    // ================= TAMBAH SCHEDULE =================
+    // ================= STORE SCHEDULE =================
     public function storeSchedule(Request $request)
     {
         try {
@@ -216,24 +252,46 @@ class AttendanceController extends Controller
                 'created_by' => 'required|exists:users,id'
             ]);
 
-            // 🔥 VALIDASI ROLE
-            $creator = DB::table('users')->where('id', $request->created_by)->first();
+            // 🔥 VALIDASI PEMBUAT
+            $creator = DB::table('users')
+                ->where('id', $request->created_by)
+                ->first();
+
             if (!in_array($creator->role, ['admin', 'operator'])) {
                 return response()->json([
                     'message' => 'Hanya admin/operator'
                 ], 403);
             }
 
-            $user = DB::table('users')->where('id', $request->user_id)->first();
+            // 🔥 VALIDASI USER
+            $user = DB::table('users')
+                ->where('id', $request->user_id)
+                ->first();
+
             if (!in_array($user->role, ['employee', 'intern'])) {
                 return response()->json([
                     'message' => 'User harus employee/intern'
                 ], 400);
             }
 
+            // 🔥 CEK DUPLIKAT
+            $cek = DB::table('schedules')
+                ->where('user_id', $request->user_id)
+                ->whereDate('date', $request->date)
+                ->first();
+
+            if ($cek) {
+                return response()->json([
+                    'message' => 'Jadwal sudah ada'
+                ], 400);
+            }
+
             DB::table('schedules')->insert([
                 'user_id' => $request->user_id,
-                'day_name' => date('l', strtotime($request->date)),
+                'day_name' => date(
+                    'l',
+                    strtotime($request->date)
+                ),
                 'date' => $request->date,
                 'shift' => $request->shift,
                 'start_time' => $request->start_time,
@@ -254,6 +312,18 @@ class AttendanceController extends Controller
                 'line' => $e->getLine()
             ], 500);
         }
+    }
+
+    // ================= DELETE SCHEDULE =================
+    public function deleteSchedule($id)
+    {
+        DB::table('schedules')
+            ->where('id', $id)
+            ->delete();
+
+        return response()->json([
+            'message' => 'Jadwal berhasil dihapus'
+        ]);
     }
 
 }
