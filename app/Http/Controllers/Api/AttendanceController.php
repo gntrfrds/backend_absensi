@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+// 🔥 PDF
+use Barryvdh\DomPDF\Facade\Pdf;
+
 class AttendanceController extends Controller
 {
 
@@ -13,13 +16,25 @@ class AttendanceController extends Controller
     public function getAllAttendance()
     {
         $data = DB::table('attendances')
-            ->join('users', 'attendances.user_id', '=', 'users.id')
+
+            ->join(
+                'users',
+                'attendances.user_id',
+                '=',
+                'users.id'
+            )
+
             ->select(
                 'attendances.*',
                 'users.name',
                 'users.role'
             )
-            ->orderBy('attendances.date', 'desc')
+
+            ->orderBy(
+                'attendances.date',
+                'desc'
+            )
+
             ->get();
 
         return response()->json([
@@ -31,8 +46,17 @@ class AttendanceController extends Controller
     public function getMyAttendance($user_id)
     {
         $data = DB::table('attendances')
-            ->where('user_id', $user_id)
-            ->orderBy('date', 'desc')
+
+            ->where(
+                'user_id',
+                $user_id
+            )
+
+            ->orderBy(
+                'date',
+                'desc'
+            )
+
             ->get();
 
         return response()->json([
@@ -46,86 +70,177 @@ class AttendanceController extends Controller
         try {
 
             $request->validate([
-                'user_id' => 'required|exists:users,id',
-                'photo' => 'required|image'
+
+                'user_id' =>
+                    'required|exists:users,id',
+
+                'photo' =>
+                    'required|image'
             ]);
 
-            $today = now()->toDateString();
-            $now = now()->format('H:i:s');
+            $today =
+                now()->toDateString();
+
+            $now =
+                now()->format('H:i:s');
 
             // 🔥 VALIDASI USER
             $user = DB::table('users')
-                ->where('id', $request->user_id)
+
+                ->where(
+                    'id',
+                    $request->user_id
+                )
+
                 ->first();
 
-            if (!in_array($user->role, ['employee', 'intern'])) {
+            if (
+
+                !in_array(
+
+                    $user->role,
+
+                    ['employee', 'intern']
+                )
+
+            ) {
+
                 return response()->json([
-                    'message' => 'Hanya employee & intern'
+
+                    'message' =>
+                        'Hanya employee & intern'
+
                 ], 403);
             }
 
             // 🔥 CEK SUDAH ABSEN
             $cek = DB::table('attendances')
-                ->where('user_id', $request->user_id)
-                ->whereDate('date', $today)
+
+                ->where(
+                    'user_id',
+                    $request->user_id
+                )
+
+                ->whereDate(
+                    'date',
+                    $today
+                )
+
                 ->first();
 
             if ($cek) {
+
                 return response()->json([
-                    'message' => 'Sudah check-in hari ini'
+
+                    'message' =>
+                        'Sudah check-in hari ini'
+
                 ], 400);
             }
 
             // 🔥 CEK JADWAL
             $schedule = DB::table('schedules')
-                ->where('user_id', $request->user_id)
-                ->whereDate('date', $today)
+
+                ->where(
+                    'user_id',
+                    $request->user_id
+                )
+
+                ->whereDate(
+                    'date',
+                    $today
+                )
+
                 ->first();
 
             if (!$schedule) {
+
                 return response()->json([
-                    'message' => 'Belum ada jadwal hari ini'
+
+                    'message' =>
+                        'Belum ada jadwal hari ini'
+
                 ], 400);
             }
 
             // 🔥 STATUS TELAT
             $late = max(
+
                 0,
+
                 strtotime($now) -
-                strtotime($schedule->start_time)
+
+                    strtotime(
+                        $schedule->start_time
+                    )
+
             ) / 60;
 
-            $status = $late > 0
-                ? 'late'
-                : 'present';
+            $status =
+                $late > 0
+                    ? 'late'
+                    : 'present';
 
             // 🔥 UPLOAD FOTO
-            $path = $request->file('photo')
-                ->store('checkin_photos', 'public');
+            $path = $request
+
+                ->file('photo')
+
+                ->store(
+                    'checkin_photos',
+                    'public'
+                );
 
             // 🔥 INSERT
             DB::table('attendances')->insert([
-                'user_id' => $request->user_id,
-                'date' => $today,
-                'check_in' => now(),
-                'check_in_photo' => $path,
-                'check_in_status' => $status,
-                'late_minutes' => $late,
-                'created_at' => now(),
-                'updated_at' => now(),
+
+                'user_id' =>
+                    $request->user_id,
+
+                'date' =>
+                    $today,
+
+                'check_in' =>
+                    now(),
+
+                'check_in_photo' =>
+                    $path,
+
+                'check_in_status' =>
+                    $status,
+
+                'late_minutes' =>
+                    round($late),
+
+                'created_at' =>
+                    now(),
+
+                'updated_at' =>
+                    now(),
             ]);
 
             return response()->json([
-                'message' => 'Check-in berhasil',
-                'status' => $status,
-                'late_minutes' => round($late)
+
+                'message' =>
+                    'Check-in berhasil',
+
+                'status' =>
+                    $status,
+
+                'late_minutes' =>
+                    round($late)
             ]);
 
         } catch (\Exception $e) {
 
             return response()->json([
-                'error' => $e->getMessage(),
-                'line' => $e->getLine()
+
+                'error' =>
+                    $e->getMessage(),
+
+                'line' =>
+                    $e->getLine()
+
             ], 500);
         }
     }
@@ -136,86 +251,174 @@ class AttendanceController extends Controller
         try {
 
             $request->validate([
-                'user_id' => 'required|exists:users,id',
-                'photo' => 'required|image'
+
+                'user_id' =>
+                    'required|exists:users,id',
+
+                'photo' =>
+                    'required|image'
             ]);
 
-            $today = now()->toDateString();
-            $now = now()->format('H:i:s');
+            $today =
+                now()->toDateString();
+
+            $now =
+                now()->format('H:i:s');
 
             // 🔥 VALIDASI USER
             $user = DB::table('users')
-                ->where('id', $request->user_id)
+
+                ->where(
+                    'id',
+                    $request->user_id
+                )
+
                 ->first();
 
-            if (!in_array($user->role, ['employee', 'intern'])) {
+            if (
+
+                !in_array(
+
+                    $user->role,
+
+                    ['employee', 'intern']
+                )
+
+            ) {
+
                 return response()->json([
-                    'message' => 'Hanya employee & intern'
+
+                    'message' =>
+                        'Hanya employee & intern'
+
                 ], 403);
             }
 
             // 🔥 CEK ABSENSI
             $attendance = DB::table('attendances')
-                ->where('user_id', $request->user_id)
-                ->whereDate('date', $today)
+
+                ->where(
+                    'user_id',
+                    $request->user_id
+                )
+
+                ->whereDate(
+                    'date',
+                    $today
+                )
+
                 ->first();
 
             if (!$attendance) {
+
                 return response()->json([
-                    'message' => 'Belum check-in'
+
+                    'message' =>
+                        'Belum check-in'
+
                 ], 400);
             }
 
             if ($attendance->check_out) {
+
                 return response()->json([
-                    'message' => 'Sudah check-out'
+
+                    'message' =>
+                        'Sudah check-out'
+
                 ], 400);
             }
 
             // 🔥 CEK JADWAL
             $schedule = DB::table('schedules')
-                ->where('user_id', $request->user_id)
-                ->whereDate('date', $today)
+
+                ->where(
+                    'user_id',
+                    $request->user_id
+                )
+
+                ->whereDate(
+                    'date',
+                    $today
+                )
+
                 ->first();
 
             if (!$schedule) {
+
                 return response()->json([
-                    'message' => 'Jadwal tidak ditemukan'
+
+                    'message' =>
+                        'Jadwal tidak ditemukan'
+
                 ], 400);
             }
 
             // 🔥 STATUS PULANG
-            $early = strtotime($now) <
-                strtotime($schedule->end_time);
+            $early =
+                strtotime($now)
 
-            $status = $early
-                ? 'early_leave'
-                : 'normal';
+                < strtotime(
+                    $schedule->end_time
+                );
+
+            $status =
+                $early
+                    ? 'early_leave'
+                    : 'normal';
 
             // 🔥 UPLOAD FOTO
-            $path = $request->file('photo')
-                ->store('checkout_photos', 'public');
+            $path = $request
+
+                ->file('photo')
+
+                ->store(
+                    'checkout_photos',
+                    'public'
+                );
 
             // 🔥 UPDATE
             DB::table('attendances')
-                ->where('id', $attendance->id)
+
+                ->where(
+                    'id',
+                    $attendance->id
+                )
+
                 ->update([
-                    'check_out' => now(),
-                    'check_out_photo' => $path,
-                    'check_out_status' => $status,
-                    'updated_at' => now(),
+
+                    'check_out' =>
+                        now(),
+
+                    'check_out_photo' =>
+                        $path,
+
+                    'check_out_status' =>
+                        $status,
+
+                    'updated_at' =>
+                        now(),
                 ]);
 
             return response()->json([
-                'message' => 'Check-out berhasil',
-                'status' => $status
+
+                'message' =>
+                    'Check-out berhasil',
+
+                'status' =>
+                    $status
             ]);
 
         } catch (\Exception $e) {
 
             return response()->json([
-                'error' => $e->getMessage(),
-                'line' => $e->getLine()
+
+                'error' =>
+                    $e->getMessage(),
+
+                'line' =>
+                    $e->getLine()
+
             ], 500);
         }
     }
@@ -224,13 +427,25 @@ class AttendanceController extends Controller
     public function getSchedules()
     {
         $data = DB::table('schedules')
-            ->join('users', 'schedules.user_id', '=', 'users.id')
+
+            ->join(
+                'users',
+                'schedules.user_id',
+                '=',
+                'users.id'
+            )
+
             ->select(
                 'schedules.*',
                 'users.name',
                 'users.role'
             )
-            ->orderBy('date', 'desc')
+
+            ->orderBy(
+                'date',
+                'desc'
+            )
+
             ->get();
 
         return response()->json([
@@ -244,72 +459,160 @@ class AttendanceController extends Controller
         try {
 
             $request->validate([
-                'user_id' => 'required|exists:users,id',
-                'date' => 'required|date',
-                'shift' => 'required|in:morning,night',
-                'start_time' => 'required',
-                'end_time' => 'required',
-                'created_by' => 'required|exists:users,id'
+
+                'user_id' =>
+                    'required|exists:users,id',
+
+                'date' =>
+                    'required|date',
+
+                'shift' =>
+                    'required|in:morning,night',
+
+                'start_time' =>
+                    'required',
+
+                'end_time' =>
+                    'required',
+
+                'created_by' =>
+                    'required|exists:users,id'
             ]);
 
             // 🔥 VALIDASI PEMBUAT
             $creator = DB::table('users')
-                ->where('id', $request->created_by)
+
+                ->where(
+                    'id',
+                    $request->created_by
+                )
+
                 ->first();
 
-            if (!in_array($creator->role, ['admin', 'operator'])) {
+            if (
+
+                !in_array(
+
+                    $creator->role,
+
+                    ['admin', 'operator']
+                )
+
+            ) {
+
                 return response()->json([
-                    'message' => 'Hanya admin/operator'
+
+                    'message' =>
+                        'Hanya admin/operator'
+
                 ], 403);
             }
 
             // 🔥 VALIDASI USER
             $user = DB::table('users')
-                ->where('id', $request->user_id)
+
+                ->where(
+                    'id',
+                    $request->user_id
+                )
+
                 ->first();
 
-            if (!in_array($user->role, ['employee', 'intern'])) {
+            if (
+
+                !in_array(
+
+                    $user->role,
+
+                    ['employee', 'intern']
+                )
+
+            ) {
+
                 return response()->json([
-                    'message' => 'User harus employee/intern'
+
+                    'message' =>
+                        'User harus employee/intern'
+
                 ], 400);
             }
 
             // 🔥 CEK DUPLIKAT
             $cek = DB::table('schedules')
-                ->where('user_id', $request->user_id)
-                ->whereDate('date', $request->date)
+
+                ->where(
+                    'user_id',
+                    $request->user_id
+                )
+
+                ->whereDate(
+                    'date',
+                    $request->date
+                )
+
                 ->first();
 
             if ($cek) {
+
                 return response()->json([
-                    'message' => 'Jadwal sudah ada'
+
+                    'message' =>
+                        'Jadwal sudah ada'
+
                 ], 400);
             }
 
             DB::table('schedules')->insert([
-                'user_id' => $request->user_id,
-                'day_name' => date(
-                    'l',
-                    strtotime($request->date)
-                ),
-                'date' => $request->date,
-                'shift' => $request->shift,
-                'start_time' => $request->start_time,
-                'end_time' => $request->end_time,
-                'created_by' => $request->created_by,
-                'created_at' => now(),
-                'updated_at' => now(),
+
+                'user_id' =>
+                    $request->user_id,
+
+                'day_name' =>
+                    date(
+                        'l',
+                        strtotime(
+                            $request->date
+                        )
+                    ),
+
+                'date' =>
+                    $request->date,
+
+                'shift' =>
+                    $request->shift,
+
+                'start_time' =>
+                    $request->start_time,
+
+                'end_time' =>
+                    $request->end_time,
+
+                'created_by' =>
+                    $request->created_by,
+
+                'created_at' =>
+                    now(),
+
+                'updated_at' =>
+                    now(),
             ]);
 
             return response()->json([
-                'message' => 'Jadwal berhasil dibuat'
+
+                'message' =>
+                    'Jadwal berhasil dibuat'
             ]);
 
         } catch (\Exception $e) {
 
             return response()->json([
-                'error' => $e->getMessage(),
-                'line' => $e->getLine()
+
+                'error' =>
+                    $e->getMessage(),
+
+                'line' =>
+                    $e->getLine()
+
             ], 500);
         }
     }
@@ -318,12 +621,222 @@ class AttendanceController extends Controller
     public function deleteSchedule($id)
     {
         DB::table('schedules')
+
             ->where('id', $id)
+
             ->delete();
 
         return response()->json([
-            'message' => 'Jadwal berhasil dihapus'
+
+            'message' =>
+                'Jadwal berhasil dihapus'
         ]);
     }
 
+    // ================= REKAP ABSENSI =================
+    public function recap(Request $request)
+    {
+        try {
+
+            $query = DB::table('attendances')
+
+                ->join(
+                    'users',
+                    'attendances.user_id',
+                    '=',
+                    'users.id'
+                )
+
+                ->select(
+                    'attendances.*',
+                    'users.name',
+                    'users.role'
+                )
+
+                ->orderBy(
+                    'attendances.date',
+                    'desc'
+                );
+
+            // 🔥 FILTER TANGGAL
+            if ($request->date) {
+
+                $query->whereDate(
+                    'attendances.date',
+                    $request->date
+                );
+            }
+
+            $data = $query->get();
+
+            // 🔥 FORMAT STATUS
+            $data = $data->map(function ($item) {
+
+                if (
+                    $item->check_in_status ==
+                    'late'
+                ) {
+
+                    $status = 'Telat';
+
+                } else if (
+                    $item->check_in_status ==
+                    'present'
+                ) {
+
+                    $status = 'Hadir';
+
+                } else {
+
+                    $status =
+                        'Tanpa Keterangan';
+                }
+
+                if (
+                    $item->check_out_status ==
+                    'early_leave'
+                ) {
+
+                    $status =
+                        'Pulang Cepat';
+                }
+
+                return [
+
+                    'id' =>
+                        $item->id,
+
+                    'name' =>
+                        $item->name,
+
+                    'role' =>
+                        $item->role,
+
+                    'date' =>
+                        $item->date,
+
+                    'check_in' =>
+                        $item->check_in
+                            ? date(
+                                'H:i',
+                                strtotime(
+                                    $item->check_in
+                                )
+                            )
+                            : null,
+
+                    'check_out' =>
+                        $item->check_out
+                            ? date(
+                                'H:i',
+                                strtotime(
+                                    $item->check_out
+                                )
+                            )
+                            : null,
+
+                    'status' =>
+                        $status,
+
+                    'check_in_photo' =>
+                        $item->check_in_photo,
+
+                    'check_out_photo' =>
+                        $item->check_out_photo,
+                ];
+            });
+
+            return response()->json([
+
+                'success' => true,
+
+                'total' =>
+                    $data->count(),
+
+                'data' => $data
+            ]);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    $e->getMessage(),
+
+                'line' =>
+                    $e->getLine()
+
+            ], 500);
+        }
+    }
+
+    // ================= EXPORT PDF =================
+    public function exportPDF(Request $request)
+    {
+        try {
+
+            $query = DB::table('attendances')
+
+                ->join(
+                    'users',
+                    'attendances.user_id',
+                    '=',
+                    'users.id'
+                )
+
+                ->select(
+                    'attendances.*',
+                    'users.name',
+                    'users.role'
+                )
+
+                ->orderBy(
+                    'attendances.date',
+                    'desc'
+                );
+
+            // 🔥 FILTER BULAN
+            if ($request->month) {
+
+                $query->whereRaw(
+
+                    "DATE_FORMAT(attendances.date, '%Y-%m') = ?",
+
+                    [$request->month]
+                );
+            }
+
+            $data = $query->get();
+
+            // 🔥 PDF VIEW
+            $pdf = Pdf::loadView(
+
+                'attendance_pdf',
+
+                [
+                    'data' => $data
+                ]
+            );
+
+            return $pdf->download(
+                'rekap_absensi.pdf'
+            );
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    $e->getMessage(),
+
+                'line' =>
+                    $e->getLine()
+
+            ], 500);
+        }
+    }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\LeaveController;
@@ -8,10 +9,21 @@ use App\Http\Controllers\Api\UserController;
 
 
 // ================= AUTH =================
-Route::post('/login', [AuthController::class, 'login']);
+
+// 🔥 LOGIN
+Route::post(
+    '/login',
+    [AuthController::class, 'login']
+);
 
 
 // ================= ABSENSI =================
+
+// 🔥 REKAP (WAJIB DI ATAS PARAMETER)
+Route::get(
+    '/attendance/recap',
+    [AttendanceController::class, 'recap']
+);
 
 // 🔥 EXPORT PDF
 Route::get(
@@ -19,19 +31,22 @@ Route::get(
     [AttendanceController::class, 'exportPDF']
 );
 
-// 🔥 REKAP
+// 🔥 LIST SEMUA ABSENSI
 Route::get(
-    '/attendance/recap',
-    [AttendanceController::class, 'recap']
+    '/attendance',
+    [AttendanceController::class, 'getAllAttendance']
 );
 
-
-// ================= ADMIN ABSENSI =================
-
-// 🔥 LIST DATA ABSENSI
+// 🔥 LIST ABSENSI ADMIN
 Route::get(
     '/attendance/admin',
     [AttendanceController::class, 'getAllAttendance']
+);
+
+// 🔥 ABSENSI PER USER (WAJIB PALING BAWAH)
+Route::get(
+    '/attendance/{user_id}',
+    [AttendanceController::class, 'getMyAttendance']
 );
 
 // 🔥 TAMBAH ABSENSI MANUAL
@@ -77,21 +92,6 @@ Route::delete(
 );
 
 
-// ================= LIST ATTENDANCE =================
-
-// 🔥 WAJIB DI ATAS PARAMETER
-Route::get(
-    '/attendance',
-    [AttendanceController::class, 'getAllAttendance']
-);
-
-// 🔥 PER USER
-Route::get(
-    '/attendance/{user_id}',
-    [AttendanceController::class, 'getMyAttendance']
-);
-
-
 // ================= USER =================
 
 // 🔥 LIST USER
@@ -116,6 +116,15 @@ Route::put(
 Route::delete(
     '/users/{id}',
     [UserController::class, 'destroy']
+);
+
+
+// ================= PROFILE =================
+
+// 🔥 UPDATE PROFILE SENDIRI
+Route::post(
+    '/profile/update/{id}',
+    [UserController::class, 'updateProfile']
 );
 
 
